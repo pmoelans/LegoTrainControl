@@ -1,11 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json;
 using LegoTrainManager.Controllers;
 using LegoTrainManager.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using MQTTnet;
-using MQTTnet.Server;
+
 
 namespace LegoTrainManager.Models
 {
@@ -29,6 +29,8 @@ namespace LegoTrainManager.Models
 
         public string Name { get; set; }
         public int PowerPercentage { get; set; }
+        public bool Reverse { get; set; }
+       
 
         public ConsumerType ConsumerType { get; set; }
 
@@ -53,7 +55,11 @@ namespace LegoTrainManager.Models
 
         public bool Online { get; set; }
 
+        public bool Invert { get; set; }
+
         public DeviceType DeviceType { get; set; } 
+
+
 
 
     }
@@ -68,6 +74,8 @@ namespace LegoTrainManager.Models
             DeviceType = DeviceType.Train;
         }
 
+       
+
         public ICollection<Powerconsumer> Powerconsumers { get; set; }
 
     }
@@ -76,37 +84,97 @@ namespace LegoTrainManager.Models
     {
         public Task HandleMqttMessage(MqttApplicationMessage message);
         public string Topic2Subscribe2 { get; }
+
+      
+       
+
     }
 
     public interface IMQTTTrainControlHandler: IHostedService
     {
-        Task PublishAsync(string topic, int tractionPercentage);
-
+        Task EstopTrain(Train train);
+        Task ShutDownTrain(Train train);
+        
+        Task UpdateTrainControl(Train train, int speed);
+        void AddMessageHandler(IMqttMessageHandler messageHandler);
     }
 
-    public class StatusHandler: IMqttMessageHandler
+    public interface ITrainSearchEngine
     {
-        public ITrainSearchEngine TrainSearchEngine { get; }
+        Task UpdateTrainStatusAsync(TrainStatusClass trainStatus);
+    }
+    public class TrainSearchEngine:ITrainSearchEngine
+    {
+        private ApplicationDbContext _context;
+        
 
-        public StatusHandler() : this(new TrainSearchEngine(ApplicationDbContext DbContext))
+        public TrainSearchEngine(ApplicationDbContext context)
         {
-
-        }
-        private StatusHandler(ITrainSearchEngine trainSearchEngine)
-        {
-            TrainSearchEngine = trainSearchEngine;
-        }
-        public Task HandleMqttMessage(MqttApplicationMessage message)
-        {
-
-           // var msg = message.PayloadSegment;
-            var str= message.ConvertPayloadToString();
-            
-            var t = new Task(() => { Console.WriteLine(message.PayloadSegment); });
-            t.Start();
-            return t;
+            _context = context;
+           
         }
 
-        public string Topic2Subscribe2 { get; } = "Lego/Trains/Status/#";
+        public async Task UpdateTrainStatusAsync(TrainStatusClass trainStatus)
+        {
+           
+        }
+
+       
+    }
+    public class StatusHandler : IMqttMessageHandler
+    {
+        private readonly TrainsController _controller;
+
+
+
+
+        public StatusHandler(TrainsController controller)
+        {
+            _controller = controller;
+
+        }
+
+        public async Task HandleMqttMessage(MqttApplicationMessage message)
+        {
+
+            // var msg = message.PayloadSegment;
+            string str = message.ConvertPayloadToString();
+            if (string.IsNullOrEmpty(str))
+                return;
+            var obj= JsonSerializer.Deserialize<TrainStatusClass>(str);
+
+            UpdatedState?.Invoke(this,obj);
+            await _controller.UpdateTrainState(obj);
+
+        }
+
+
+        public string Topic2Subscribe2 { get; } = "Lego/Trains/Status/LaboTrain";
+        public event EventHandler<object>? UpdatedState;
+    }
+
+    public class TrainStatusClass
+    {
+        public string TrainId { get; set; }
+        public int Power { get; set; }
+        public double Vbat { get; set;}
+    }
+
+    public class TrainCommandClass
+    {
+        public string TrainId { get; set; }
+        public int Power { get; set; }
+
+        //enable the emergency brake
+        public bool EStop { get; set; }
+
+        //Power down the train
+        public bool ShutDown { get; set; }
+
+        public override string ToString()
+        {
+            var str = JsonSerializer.Serialize<TrainCommandClass>(this);
+            return str;
+        }
     }
 }

@@ -3,16 +3,28 @@
 void MqttConnector::connect(char* mqtt_server, int mqtt_port,char* clientId)
 {
   Serial.print("Attempting MQTT connection...");
+  init(mqtt_server,mqtt_port,clientId);
+    
+  connect();
+ 
+}
+
+void MqttConnector::init(char* mqtt_server, int mqtt_port,char* clientId)
+{
+
   ClientId = clientId;
   
   client.setClient(espClient);
   client.setServer(mqtt_server, mqtt_port);
-  reconnect();
+ 
  
 }
-
-void MqttConnector::reconnect() {
+bool MqttConnector::connect() {
   // Loop until we're reconnected
+  if(client.connected())
+  {
+    return false;
+  }
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Create a random client ID
@@ -22,7 +34,7 @@ void MqttConnector::reconnect() {
     {
       Serial.println("Connected");
       client.loop();
-      return;   
+      return true;   
     } 
     else 
     {
@@ -33,13 +45,14 @@ void MqttConnector::reconnect() {
       delay(5000);
     }
   }
- 
+  return true;
 }
 
-void MqttConnector::publish(char* topic, char* msg)
+bool MqttConnector::publish(char* topic, char* msg)
 {
-  reconnect();
+  bool resubscribe= connect();
   client.publish(topic, msg);
  Serial.print("Sending:");
   Serial.println(msg);
+  return resubscribe;
 }

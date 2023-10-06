@@ -16,8 +16,9 @@ class MqttConnector
     char* ClientId;
 
     void connect(char* MqttServer,int port,char* clientId);
+    void init(char* MqttServer,int port,char* clientId);
     void callback(char* topic, byte* payload, unsigned int length);
-    void reconnect();
-    void publish(char* topic, char* msg);
+    bool connect();
+    bool publish(char* topic, char* msg);
 };
 #endif 

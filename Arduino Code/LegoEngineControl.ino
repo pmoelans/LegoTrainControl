@@ -1,18 +1,25 @@
-//#include "FastWifi8266.h"
+//Versions
+//version 1.3: Uses the chip instead of the break-out board
+
+
+
 #include "Mqtt.h"
 #include "secrets.h"
 #include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 #include "WiFiAutoSelector.h"
 
-#define en1 13  //D7
-#define en2 12  //D6
-#define en3 0   //D3
-#define en4 2   //D4
+#define en1A 5   //D1
+#define en2A 4   //D2
+#define en12 0   //D3
+#define en3A 12  //D6
+#define en4A 13  //D7
+#define en34 15  //D8
+#define BtnPress 16//D0
 
-#define shutDownPin 14  //D8
-#define Led 5           //D0
-
+#define shutDownPin 14  //D5
+#define Led 2           //D4
+#define WaitTime 2000 //the time we wait before we engage the switch off button. Or trigger on a second button press
 
 #define WIFI_CONNECT_TIMEOUT 8000
 WiFiAutoSelector wifiAutoSelector(WIFI_CONNECT_TIMEOUT);
@@ -22,16 +29,20 @@ float currentPower = 0;
 int requestedPower = 0;
 bool eStop;
 bool shutDown;
+bool shutDownRequested=false;
 long millis_pre;
 long deltaMilli = 5000;
 long millisrealTimePre = 0;
 void setup() {
 
   millis_pre = millis();
-  pinMode(en1, OUTPUT);
-  pinMode(en2, OUTPUT);
-  pinMode(en3, OUTPUT);
-  pinMode(en4, OUTPUT);
+  pinMode(en1A, OUTPUT);
+  pinMode(en2A, OUTPUT);
+  pinMode(en12, OUTPUT);
+  pinMode(en3A, OUTPUT);
+  pinMode(en4A, OUTPUT);
+  pinMode(en34, OUTPUT);
+  pinMode(BtnPress,INPUT);
 
   //keep the arduino powered on
   pinMode(shutDownPin, OUTPUT);
@@ -58,9 +69,9 @@ void Blink(int cnt) {
   for(int i=0;i<cnt;i++)
   {
     digitalWrite(Led, LOW);
-    delay(100);
+    delay(50);
     digitalWrite(Led, HIGH);
-    delay(100);
+    delay(50);
   }
   
 }
@@ -97,6 +108,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println(shutDown);
   requestedPower = doc["Power"];
 
+  
   //Blink the status led to indicate that we have received a message
   Blink(1);
 }
@@ -121,29 +133,36 @@ void UpdatePower() {
   }
   //map it to a percentage
   int percentage = map(abs((int)currentPower), 0, 100, 0, 255);
+  bool direction = HIGH;
+  bool inv = LOW;
 
-  if (currentPower > 0) {
-    analogWrite(en1, percentage);
-    analogWrite(en2, 0);
+  if (currentPower < 0) 
+  {
+      direction=LOW;
+      inv = HIGH;
+    
+  }
+  
+  digitalWrite(en1A, direction);
+  digitalWrite(en2A, inv);
 
     //the second image just gives the invers of the other
-    analogWrite(en3, 0);
-    analogWrite(en4, percentage);
-    return;
-  }
-  analogWrite(en1, 0);
-  analogWrite(en2, percentage);
+  digitalWrite(en3A, inv);
+  digitalWrite(en4A, direction);   
 
-  //the second image just gives the invers of the other
-  analogWrite(en3, percentage);
-  analogWrite(en4, 0);
+  //set the power:
+  //==============
+  analogWrite(en12,percentage);
+  analogWrite(en34,percentage);
+
+  
 }
 
 void StopEngine() {
-  analogWrite(en1, 0);
-  analogWrite(en2, 0);
-  analogWrite(en3, 0);
-  analogWrite(en4, 0);
+  digitalWrite(en1A, LOW);
+  digitalWrite(en2A, LOW);
+  digitalWrite(en3A, LOW);
+  digitalWrite(en4A, LOW);
 }
 
 void EStop() {
@@ -183,8 +202,6 @@ void loop() {
     }
   }
   
-
-
   mqttConnector.client.loop();
   // put your main code here, to run repeatedly:
   if ((millis() - millis_pre) > deltaMilli) {
@@ -201,5 +218,20 @@ void loop() {
   //Update the power settings
   UpdatePower();
 
+  
   millisrealTimePre = millis();
+
+  //detect the buttonpress
+  if(millis()>WaitTime)
+  {
+    if(digitalRead(BtnPress)==HIGH)
+    {
+      shutDownRequested=true;
+    }
+    if(digitalRead(BtnPress)==LOW && shutDownRequested)
+    {
+      delay(200);
+      shutDown=true;
+    }
+  }
 }

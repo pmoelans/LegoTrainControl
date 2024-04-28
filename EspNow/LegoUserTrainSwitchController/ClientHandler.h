@@ -27,6 +27,7 @@ class ClientHandler {
     TrainState clientList[15];
     int idx;
     void CheckIndex();
+    void PrintMac(uint8_t* mac_addr);
   };
 
   #endif

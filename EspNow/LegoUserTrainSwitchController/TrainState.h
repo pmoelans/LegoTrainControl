@@ -16,15 +16,15 @@ class TrainState {
    
     float Vbat;
     String TrainId;
-    const uint8_t*  MacAddress;
+    uint8_t  MacAddress[6];
     int SpeedState;
     bool ShutDown;
     bool EStop;
     String CreateJsonMessage();
-
+    void PrintMyMac();
   private:
-    
-  
+    void PrintMac(uint8_t* mac_addr);
+    void SaveMyMac(const uint8_t* pmacAddress);
   };
 
   #endif

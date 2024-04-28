@@ -14,8 +14,8 @@ bool ClientHandler::IsNewClient(String client, const uint8_t* pMacAddress)
    for (int i = 0; i < 15; i++) {
         if (clientList[i].TrainId == client) {
             return false;
-            Serial.print("Existing Client:");
-            Serial.println(client);
+            //Serial.print("Existing Client:");
+            //Serial.println(client);
         }
     }
     //get the value of the pointer and use it to initialize the trainstate
@@ -71,13 +71,23 @@ void ClientHandler::CheckIndex()
     currentClientIndex=idx-1;
   }
 }
+void ClientHandler::PrintMac(uint8_t* mac_addr)
+{
+  char macStr[18];
 
+  snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
+           mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+  Serial.println(macStr);
+
+}
 void ClientHandler::GoToNextClient(int direction)
 {
   currentClientIndex=currentClientIndex+direction;
   CheckIndex();
   CurrentTrain= clientList[currentClientIndex];
   Serial.print("Current train is:");
-  Serial.println(CurrentTrain.TrainId);
+  Serial.print(CurrentTrain.TrainId);
+  Serial.print("|");
+  PrintMac(CurrentTrain.MacAddress);
 
 }

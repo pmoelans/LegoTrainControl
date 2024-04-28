@@ -12,7 +12,6 @@
 //need to fill this in with the mac address if the receiver
 //==========================================================
 //C0:4E:30:80:72:4C
-uint8_t broadcastAddress[] = {0xC0, 0x4E, 0x30, 0x80, 0x72, 0x4C};
 esp_now_peer_info_t peerInfo;
 
 float currentPower = 0;
@@ -21,7 +20,7 @@ bool eStop;
 bool shutDown;
 bool shutDownRequested=false;
 long millis_pre;
-long deltaMilli = 5000;
+long deltaMilli = 500;
 long millisrealTimePre = 0;
 
 //test
@@ -148,6 +147,7 @@ void SendStatus() {
    
   if (result == ESP_OK) {
     Serial.println("Sent with success");
+    deltaMilli=defaultUpdateFrequency;//only send data every 10s after registering
   }
   else {
     Serial.println("Error sending the data");
@@ -179,6 +179,12 @@ void UpdatePower() {
   //Serial.println(currentPower);
   //map it to a percentage
   int percentage = map(abs((int)currentPower), 0, 100, minPercentage, 255);
+
+  if (percentage<=minPercentage)
+  {
+    percentage=0;
+  }
+
   bool direction = HIGH;
   bool inv = LOW;
 

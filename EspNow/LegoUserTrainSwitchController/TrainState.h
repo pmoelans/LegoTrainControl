@@ -23,7 +23,6 @@ class TrainState {
     String CreateJsonMessage();
     void PrintMyMac();
   private:
-    void PrintMac(uint8_t* mac_addr);
     void SaveMyMac(const uint8_t* pmacAddress);
   };
 

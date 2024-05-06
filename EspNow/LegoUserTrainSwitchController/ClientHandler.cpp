@@ -49,15 +49,8 @@ bool ClientHandler::CanFetchNext()
 
 void ClientHandler::UpdateSpeed(int speed)
 { 
-  Serial.println("Updating Speed");
-  CurrentTrain.UpdateSpeed(speed);
-
-  Serial.print("Updating train at index:");
-  Serial.println(currentClientIndex);
-
+  CurrentTrain.UpdateSpeed(speed); 
   clientList[currentClientIndex]= CurrentTrain;
-  Serial.println("Speed Updated");
-
 }
 void ClientHandler::CheckIndex()
 {
@@ -71,23 +64,12 @@ void ClientHandler::CheckIndex()
     currentClientIndex=idx-1;
   }
 }
-void ClientHandler::PrintMac(uint8_t* mac_addr)
-{
-  char macStr[18];
 
-  snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
-           mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-  Serial.println(macStr);
-
-}
 void ClientHandler::GoToNextClient(int direction)
 {
   currentClientIndex=currentClientIndex+direction;
   CheckIndex();
   CurrentTrain= clientList[currentClientIndex];
-  Serial.print("Current train is:");
-  Serial.print(CurrentTrain.TrainId);
-  Serial.print("|");
-  PrintMac(CurrentTrain.MacAddress);
+  
 
 }

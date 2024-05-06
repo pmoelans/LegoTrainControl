@@ -5,14 +5,6 @@ TrainState::TrainState()
   TrainId="NULL";
 }
 
-void TrainState::PrintMac(uint8_t* mac_addr)
-{
-  char macStr[18];
-  snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
-           mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-  Serial.println(macStr);
-}
-
 TrainState TrainState::Init(String clientId,const uint8_t* pmacAddress)
 {
   TrainId=clientId;  
@@ -22,7 +14,6 @@ TrainState TrainState::Init(String clientId,const uint8_t* pmacAddress)
   EStop=false;
   //*MacAddress=*pmacAddress;
 
-  PrintMyMac();
   SaveMyMac(pmacAddress);
   return *this;
 }
@@ -33,14 +24,6 @@ void TrainState::SaveMyMac(const uint8_t* pmacAddress)
   {
     MacAddress[i]=pmacAddress[i];
   } 
-}
-void TrainState::PrintMyMac()
-{
-  char macStr[18];
-  Serial.print("MyMac:");
-  snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
-           MacAddress[0], MacAddress[1], MacAddress[2], MacAddress[3], MacAddress[4], MacAddress[5]);
-  Serial.println(macStr);
 }
 
 void TrainState::EnableShutDown()
@@ -54,7 +37,6 @@ void TrainState::EnableEmergencyBrake()
 }
 void  TrainState::UpdateSpeed(int speed)
 {
-  PrintMyMac();
   EStop= false;
   SpeedState=speed;
 }

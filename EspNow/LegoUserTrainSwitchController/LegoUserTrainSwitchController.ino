@@ -7,12 +7,21 @@
 #include <Arduino_Helpers.h>
 #include <AH/Hardware/Button.hpp>
 
+#define DEBUG false // Set to false to disable debug prints
+#if DEBUG
+#define debug(x) Serial.print(x)
+#define debugln(x) Serial.println(x)
+#else
+#define debug(x)
+#define debugln(x)
+#endif
 
 int previousSpeed = 0;
 int counter = 0;
 int currentElement = 0;
 int resendCount = 0;
 int maxResendCount = 10;
+int restartCount=0;
 bool preState=1;
 
 
@@ -34,9 +43,8 @@ esp_now_peer_info_t peerInfo;
 // callback function that will be executed when data is received
 void OnDataRecv(const uint8_t* mac_addr, const uint8_t* incomingData, int len) {
 
-  Serial.print("Packet received from: ");
+  debug("Packet received from: ");
   PrintMac(mac_addr);
-
 
   //deserialize the data:
   //=====================
@@ -57,7 +65,7 @@ void OnDataRecv(const uint8_t* mac_addr, const uint8_t* incomingData, int len) {
     //Serial.println(peerInfo.peer_addr);
     // Add peer
     if (esp_now_add_peer(&peerInfo) != ESP_OK) {
-      Serial.println("Failed to add peer");
+      debugln("Failed to add peer");
       return;
     }
   }
@@ -65,20 +73,28 @@ void OnDataRecv(const uint8_t* mac_addr, const uint8_t* incomingData, int len) {
 
 void setup() {
 
-  Serial.begin(115200);
+  if(DEBUG)
+  {
+    Serial.begin(115200);
+  }
 
   InitButtons();
 
   //Set device as a Wi-Fi Station
   WiFi.mode(WIFI_STA);
 
-  //Init ESP-NOW
-  if (esp_now_init() != ESP_OK) {
-    Serial.println("Error initializing ESP-NOW");
-    return;
+  //Init ESP-NOW && restart the esp if it does not work
+  while ((esp_now_init() != ESP_OK) && (restartCount<maxRetryCountEspNowStart)) {
+    debugln("Error initializing ESP-NOW");
+    restartCount+=1;
+    delay(100);
+  }
+  if(restartCount==maxRetryCountEspNowStart)
+  {
+    ESP.restart();
   }
 
-  Serial.print("EspNow started");
+  debugln("EspNow started");
 
   // Once ESPNow is successfully Init, we will register for recv CB to
   // get recv packer info
@@ -113,10 +129,9 @@ void GetNextClient()
   
   if(currentState==0 && preState==1&& ((millis()-pressTime)>debounceDelta))
   {
-
     pressTime= millis();
 
-    Serial.println("Fetching next client");
+    debugln("Fetching next client");
     trainHandler.GoToNextClient(1);
     SpeedBtn.SetCounter(trainHandler.CurrentTrain.SpeedState);    
   }
@@ -164,8 +179,6 @@ void SendTrainMessage() {
   statusDoc["Power"] = trainHandler.CurrentTrain.SpeedState;
   statusDoc["ShutDown"] = trainHandler.CurrentTrain.ShutDown;
   statusDoc["eStop"] = trainHandler.CurrentTrain.EStop;
-
-
   serializeJson(statusDoc, msg);
   
   resendCount=0;
@@ -173,21 +186,19 @@ void SendTrainMessage() {
 }
 void SendEspNow()
 {
-  Serial.print("Sending data to:");
-  PrintMac(trainHandler.CurrentTrain.MacAddress);
-  trainHandler.CurrentTrain.PrintMyMac();
-  Serial.println(msg);
+  debug("Sending data to:");
+  debug(trainHandler.CurrentTrain.TrainId);
+  debugln(msg);
 
   //Serial.println(trainHandler.CurrentTrain.MacAddress);
   esp_err_t result = esp_now_send(trainHandler.CurrentTrain.MacAddress, (uint8_t*)&msg, sizeof(msg));
 
   if (result == ESP_OK) {
-    Serial.println("Sent with success");
+    debugln("Sent with success");
     resendCount = 0;
   } else {
 
-    Serial.println(result);
-    Serial.println("Error sending the data");
+    debugln("Error sending the data");
     if (resendCount < maxResendCount) {
       resendCount += 1;
       SendEspNow();
@@ -199,5 +210,5 @@ void PrintMac(const uint8_t* mac_addr) {
 
   snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
            mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-  Serial.println(macStr);
+  debugln(macStr);
 }

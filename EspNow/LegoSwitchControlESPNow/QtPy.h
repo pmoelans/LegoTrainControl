@@ -8,6 +8,8 @@
 #define shutDownPin  10 //D5
 #define Led  9   //D4
 #define Vbat 0
-//#define Acceleration 0.001
-#define minPercentage  100//180
-#define engineOn 20
+#define SwitchTimeMsec 1000
+#define End1 20
+#define End2 21
+
+

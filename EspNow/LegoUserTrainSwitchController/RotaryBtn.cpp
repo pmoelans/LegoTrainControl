@@ -1,60 +1,70 @@
 #include "RotaryBtn.h"
 
-RotaryBtn::RotaryBtn(int rotationAInput, int rotationBInput, int pushInput, int deltaCounter, int minCounter, int maxCounter)
+
+
+RotaryBtn::RotaryBtn(int rotationAInput, int rotationBInput, int pushInput)
   {        
     _rotationAInput=rotationAInput;
     _rotationBInput=rotationBInput;
     _pushInput=pushInput;
-    _deltaCounter=deltaCounter;
-    _minCounter = minCounter;
-    _maxCounter=maxCounter;
-    
+       
     pinMode(_rotationAInput, INPUT);
     pinMode(_rotationBInput, INPUT);
     pinMode(_pushInput, INPUT);
 
     _lastState = digitalRead(_rotationAInput);   
   }
-  void RotaryBtn::ReverseDirection()
+  void RotaryBtn::RegisterCallBack(Motion motion,void (*callback)())
   {
-    //Change the direction of the counter in software:
-    _deltaCounter=(-1)*_deltaCounter;
-
+    events[eventCount].motion = motion;
+    events[eventCount].callback = callback;
+    eventCount++;
   }
-  int  RotaryBtn::ReadRotaryState()
+  void  RotaryBtn::CheckState()
   {
-    int aState = digitalRead(_rotationAInput); // Reads the "current" state of the outputA
+    CheckPressState();
+    CheckRotaryState();
+  } 
+  void RotaryBtn::CheckPressState()
+  {
+    int btnState = digitalRead(_pushInput);
+    //Serial.println(btnState);
+    if(_btnPress!=btnState && btnState==1)
+    {
+      Motion motion=BtnPress;
+      TriggerEvent(motion);      
+    }
+    _btnPress=btnState;
+  }
+  void  RotaryBtn::CheckRotaryState()
+  {    
+    int aState = digitalRead(_rotationAInput);     // Reads the "current" state of the outputA
     // If the previous and the current state of the outputA are different, that means a Pulse has occured
     if (aState != _lastState){     
       // If the outputB state is different to the outputA state, that means the encoder is rotating clockwise
-     
-      if (digitalRead(_rotationBInput) != aState) { 
-        _counter+=_deltaCounter;
-        
-      } else {
-        _counter -=_deltaCounter;
-       
+      Motion _tempMotion;
+      if (digitalRead(_rotationBInput) != aState) 
+      { 
+        _tempMotion=Positive;        
+      } else 
+      {
+       _tempMotion=Negative;       
       }
+       
+      TriggerEvent(_tempMotion);
+               
+    }
+    _lastState = aState;  
+  }
 
-      if(_counter>_maxCounter)
-        {
-          _counter=_maxCounter;
-        }
-         if(_counter<_minCounter)
-        {
-          _counter= _minCounter;
-        }
-    
-      
-    } 
-    _lastState = aState; // Updates the previous state of the outputA with the current state
-    return _counter;
-  }
-  void  RotaryBtn::ResetCounter()
+  void  RotaryBtn::TriggerEvent(Motion motion) 
   {
-    _counter=0;
+        for (int i = 0; i < eventCount; i++) {
+            if (events[i].motion == motion && events[i].callback) {
+                events[i].callback(); // Call the callback function
+            }
+        }
   }
-  void RotaryBtn::SetCounter(int counterValue)
-  {
-    _counter=counterValue;
-  }
+
+
+  

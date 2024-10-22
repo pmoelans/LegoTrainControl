@@ -2,15 +2,19 @@
 #define RotaryBtn_H
 // MARK: Libraries
 #include <Arduino.h>
+#include "enums.h"
 // MARK: Class / Functions / Variables
 class RotaryBtn {
+  struct Event {
+    Motion motion;
+    void (*callback)();
+};
 public:
   // MARK: Lifecycle
-  int ReadRotaryState();
-  void SetCounter(int counterValue);
-  void ReverseDirection();
-  void ResetCounter();
-  RotaryBtn(int rotationAInput, int rotationBInput, int pushInput, int deltaCounter, int minCounter, int maxCounter);
+  RotaryBtn(int rotationAInput, int rotationBInput, int pushInput);
+  void  CheckState();
+  //Callback function that needs to be called for a given motion
+  void RegisterCallBack(Motion motion,void (*callback)());
 private:
   // MARK: Variables
   // Debuging Identifier
@@ -19,9 +23,14 @@ private:
   int _rotationBInput;
   int _pushInput;
   int _lastState=0;
-  int _deltaCounter;
-  int _minCounter;
-  int _maxCounter;  
+  bool _btnPress=false;
+
+  void  TriggerEvent(Motion motion);
+  Event events[10]; // Array to store events, adjust size as needed
+  int eventCount = 0;   
+
+  void CheckRotaryState();
+  void CheckPressState();
 };
 
 

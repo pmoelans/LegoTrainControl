@@ -9,23 +9,47 @@ ClientHandler::ClientHandler()
    * \param client is the name of the client.
    * \param pMacAddress is the pointer to the macAddress reported by the train
    */
-bool ClientHandler::IsNewClient(String client, const uint8_t* pMacAddress)
+
+void ClientHandler::SetCurrentClient(int idx)
+{
+  if(clientList[idx].ClientType=="Train")
+  {
+    CurrentTrainId = idx;
+  }
+  else
+  {
+    CurrentSwitchId=idx;
+  }  
+}
+bool ClientHandler::IsNewClient(String client, int i)
+{
+ return clientList[i].ClientId==client;
+}
+void  ClientHandler::AddNewClient(int idx,String client, const uint8_t* pMacAddress, String clientType)
+{
+  clientList[idx]=ClientState().Init(client,pMacAddress,idx,clientType);
+}
+bool ClientHandler::CheckClient(String client, const uint8_t* pMacAddress,String clientType)
 {
    for (int i = 0; i < 15; i++) {
-        if (clientList[i].TrainId == client) {
+        if (IsNewClient(client,i))//clientList[i].TrainId == client) 
+        {
+
             return false;
             //Serial.print("Existing Client:");
             //Serial.println(client);
         }
     }
     //get the value of the pointer and use it to initialize the trainstate
-    clientList[idx]=TrainState().Init(client,pMacAddress);
+    //clientList[idx]=TrainState().Init(client,pMacAddress);
+    AddNewClient(idx,client, pMacAddress,clientType);
     Serial.print("New client:");
     Serial.println(client);
 
     if(idx==0)
     {
-      CurrentTrain=clientList[idx];
+      SetCurrentClient(idx);
+      //CurrentTrain=clientList[idx];
       currentClientIndex=idx;
     }
 
@@ -43,15 +67,10 @@ void ClientHandler:: ResetIndex()
 }
 bool ClientHandler::CanFetchNext()
 {
-  return currentClientIndex<idx;
-  
+  return currentClientIndex<idx;  
 }
 
-void ClientHandler::UpdateSpeed(int speed)
-{ 
-  CurrentTrain.UpdateSpeed(speed); 
-  clientList[currentClientIndex]= CurrentTrain;
-}
+
 void ClientHandler::CheckIndex()
 {
      //check if we need to reset the index
@@ -64,12 +83,23 @@ void ClientHandler::CheckIndex()
     currentClientIndex=idx-1;
   }
 }
-
-void ClientHandler::GoToNextClient(int direction)
+void ClientHandler::UpdateIndex(int direction)
 {
   currentClientIndex=currentClientIndex+direction;
+}
+
+void ClientHandler::GoToNextClient(int direction,String clientType)
+{  
+  UpdateIndex(direction);
   CheckIndex();
-  CurrentTrain= clientList[currentClientIndex];
+
+  while(clientList[currentClientIndex].ClientType!=clientType)
+  {
+    UpdateIndex(direction);
+    CheckIndex();
+  }
+
+  SetCurrentClient(currentClientIndex);//CurrentTrain= clientList[currentClientIndex];
   
 
 }

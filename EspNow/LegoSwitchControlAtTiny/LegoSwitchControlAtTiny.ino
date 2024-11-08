@@ -1,78 +1,76 @@
-#include <avr/io.h>
-#define SwitchControl 0
-#define Direction1 1      //PB1
-#define Direction2 2      //PB2
-#define End1 3            //PB3
-#define End2 4            //PB4
-//#define Power 5           //PB5
+//this test is designed to test the responsiveness of the button press for th ATTiny13A and by changing the output based on the direction of the switching
+//The test shows that the ATTiny is capable of detecting a btn press without delay and changes the led that needs to light up and keepds the led on until the end switch is reached.
+//This works well with the debouncing method implemented
 
-bool DirectionWhenAtEnd1 = true;//was false
-bool need2Switch= false;
-bool buttonActive= false;
-long millis_switch;
-long switchingTimeOut = 50;
+//Agreements:
+//end 1: direction in which the train goes straight 
+//end 2: direction in which the train takes the deviation
 
-void DetermineStartPosition()
+#define Btn PB0
+#define en1A PB1      //PB1
+#define en2A PB2
+
+#define End1 PB4
+#define End2 PB3
+
+bool buttonActive=false;
+long time2Switch= -1;
+long buttonTimer =-1;
+//bool DirectionWhenAtEnd1 = false;//was false
+bool longPressActive=false;
+
+int debounce = 20;
+int checkEndStopsTimeOut=100;
+int longPressTime = 200;
+
+//this is the default direction:
+//in the calibration fase we check which one is which:
+int towardsDirection1=en1A;
+int awayFromDirection1= en2A;
+
+void UpdateSwitchState()
 {
-  
-  //Determine the start position:
-  //=============================
-  if(digitalRead(End1)==1)
-  {
-    DirectionWhenAtEnd1=true;
-    return;
-  }
-  if(digitalRead(End2)==1)
-  {
-    DirectionWhenAtEnd1=false;
-    return;
-  }
-  //unkown position, switch to a position:
-  //======================================
-  UpdateSwitchState();
+    StopEngine();
+    if(digitalRead(End1)==HIGH)
+    {
+       digitalWrite(awayFromDirection1,HIGH);       
+    }
+    else
+    {
+      digitalWrite(towardsDirection1,HIGH);
+    }
+    time2Switch= millis();
 }
 
-void UpdateSwitchState() {
- 
-  StopMotor();
 
-  if (DirectionWhenAtEnd1) {    
-    digitalWrite(Direction2,HIGH);
-  
-  } else {
-    digitalWrite(Direction1,HIGH);    
-  }
-  need2Switch = true;
-  //digitalWrite(Power,HIGH); 
-  millis_switch= millis();
-  //millis_switch=millis();
-
-}
-void StopMotor()
-{
-  //set all to low
-  digitalWrite(Direction1,LOW); 
-  digitalWrite(Direction2,LOW); 
-  //digitalWrite(Power,LOW); 
- 
-}
-
-void CheckBtnState() 
-{
-   if (digitalRead(SwitchControl)==1) {
+void CheckBtnState() {
+  if (digitalRead(Btn) == HIGH) {
     //button press is detected
     if (buttonActive == false) {
       buttonActive = true;
+      buttonTimer = millis();
       return;
-    }    
+    }
+
+    if ((millis() - buttonTimer > longPressTime))
+     {
+      //There is a long button press detected
+      //=====================================
+      longPressActive = true;
+      return;
+    }
   } else  //readbtn press is LOW
   {
     //Check that a button press is active
     if (buttonActive == true) {
-     
-      //Blink(1);
-      UpdateSwitchState();
-      
+      if (longPressActive == false) {
+        //short press, do nothing
+        
+      } else {
+        //Long press is detected:
+        //=======================
+        UpdateSwitchState();
+      }
       //reset the button state
       buttonActive = false;
       return;
@@ -80,22 +78,66 @@ void CheckBtnState()
   }
 }
 
+void StopEngine()
+{
+  digitalWrite(en1A, LOW);
+  digitalWrite(en2A, LOW);
+}
+void Calibrating()
+{
+  StopEngine();
 
-void setup() {
-  millis_switch= millis();
-  //millis_pre = millis();
-  pinMode(Direction1,OUTPUT);
-  pinMode(Direction2,OUTPUT);
-//  pinMode(Power,OUTPUT);
+  //Here we calibrate what direction we should move in when we start up the switch:
+  //===============================================================================
+  if(digitalRead(End1)==HIGH || (digitalRead(End1)==LOW && digitalRead(End2)==LOW))
+  {
+      //move away from the end1 and check whether the direction is ok
+      digitalWrite(awayFromDirection1,HIGH);  
+      WaitWhileEndIsReached();
+      if(digitalRead(End2)==HIGH)
+      {
+        return;
+      }    
+      awayFromDirection1=en1A;
+      towardsDirection1 = en2A;
+  }
+  else if(digitalRead(End2)==HIGH)
+  {
+      digitalWrite(towardsDirection1,HIGH);
+      WaitWhileEndIsReached();
+      if(digitalRead(End1)==HIGH)
+      {
+        return;
+      } 
+      awayFromDirection1= en1A;
+      towardsDirection1 = en2A;
+  }
   
-  pinMode(SwitchControl,INPUT);
+  StopEngine();
+  
+  //Move towards direction1:
+  //========================
+  digitalWrite(towardsDirection1,HIGH);
+
+}
+void WaitWhileEndIsReached()
+{
+  while(digitalRead(End1)==LOW && digitalRead(End2)==LOW)
+  {
+    delay(50);
+  }
+   StopEngine();
+}
+void setup() 
+{
+  pinMode(en1A,OUTPUT);
+  pinMode(en2A,OUTPUT);
   pinMode(End1,INPUT);
   pinMode(End2,INPUT);
+  pinMode(Btn,INPUT);
 
-  StopMotor();
-
-  //digitalWrite(Led, HIGH);
-  DetermineStartPosition();
+  
+  Calibrating();
 }
 
 void loop() 
@@ -103,21 +145,8 @@ void loop()
   //detect the buttonpress  
   CheckBtnState();
   
-
-   if( (millis()-millis_switch>switchingTimeOut) &&need2Switch)
-   {  
-
-     //Check if end1/2 is Reached
-    //=======================
-    if((digitalRead(End1)==1)||(digitalRead(End2)==1 ))
-    {
-      
-      StopMotor();
-      //update the direction:
-      //=====================
-      DirectionWhenAtEnd1=!DirectionWhenAtEnd1;
-
-      need2Switch=false;
-    }    
-  }
+  if((digitalRead(End1)==HIGH || digitalRead(End2)==HIGH)&&(millis()-time2Switch)>checkEndStopsTimeOut)
+  {
+    StopEngine();
+  }   
 }

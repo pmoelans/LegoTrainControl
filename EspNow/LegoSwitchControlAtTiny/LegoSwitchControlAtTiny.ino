@@ -57,6 +57,7 @@ void CheckBtnState() {
       //There is a long button press detected
       //=====================================
       longPressActive = true;
+      UpdateSwitchState();
       return;
     }
   } else  //readbtn press is LOW
@@ -69,7 +70,7 @@ void CheckBtnState() {
       } else {
         //Long press is detected:
         //=======================
-        UpdateSwitchState();
+        
       }
       //reset the button state
       buttonActive = false;

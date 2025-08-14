@@ -1,0 +1,9 @@
+#define buttonEBreak 20
+#define buttonShutDown 21
+#define nextTrainBtn 1
+#define PowerHold 4
+#define Led 7
+#define switchLights 6
+#define maxRetryCountEspNowStart 5
+#define Rx 2
+#define Tx 3

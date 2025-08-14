@@ -2,7 +2,7 @@
 This project started out as a hobby project and got a tiny bit out of hand. The goal of the project was to create a custom controller for lego power functions trains. 
 The specific goal was to get rid of the infrared controller and use Wifi instead. The Wifi turned out to be an issue since the connection time of the arduino boards with wifi can take a while and the attention span of 
 kids is rather limited. Hence the current controller is now working with the ESPNOW protocol. 
-Currently the project contains 3 seperate module:
+Currently the project contains 3 seperate modules:
 + The train controller
 + The switch controller
 + The user controller(UI)

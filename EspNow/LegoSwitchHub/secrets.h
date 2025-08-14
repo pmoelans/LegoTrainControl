@@ -1,4 +1,0 @@
-uint8_t broadcastAddress[] = {0xC0, 0x4E, 0x30, 0x80, 0x72, 0x4C};
-#define ledPin 1
-#define  SDA  2
-#define SCL 3

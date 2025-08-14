@@ -23,7 +23,7 @@ serious constraints on the design. The platform also needs a few additional feat
  + TB6612 Dual motor driver (TB6612FNG). Instead of just using the chip, I used the existing ready made breakout board
  + Custom build PCB(I'm not an electronics engineer so I'm sure that things could have been done better and more efficiently)
  + 3D printed casing in which you can snap in the PCB board as well as fit the lego power functions connectors. The shape of the box is heavily inspired on the original power functions box and the box on https://mattzobricks.com/.
-   
+  
 ## The swith controller
 The switch controller is the hard and software that is used to control the switch. We use end switches in order to detect whether the switch is in its final position. This works a bit easer since each type of lego
 switch has its own movement which might take a little more time to make the actual switch.
